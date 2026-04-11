@@ -22,28 +22,60 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private long expiration;
 
-    // ✅ Generate signing key
+    // =========================
+    // 🔐 SIGN KEY
+    // =========================
     private Key getSignKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secret);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // ✅ Generate Token
-    public String generateToken(String username) {
+    // =========================
+    // 👤 USER TOKEN
+    // =========================
+    public String generateUserToken(String username) {
+        return buildToken(username, "ROLE_USER");
+    }
+
+    // =========================
+    // 👑 ADMIN TOKEN
+    // =========================
+    public String generateAdminToken(String username) {
+        return buildToken(username, "ROLE_ADMIN");
+    }
+
+    // =========================
+    // 🔧 COMMON TOKEN BUILDER
+    // =========================
+    private String buildToken(String username, String role) {
+    	System.out.println("GENERATING TOKEN ROLE: " + role);
         return Jwts.builder()
                 .setSubject(username)
+                .claim("role", role) // ✅ FIXED (IMPORTANT)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
+        
     }
 
-    // ✅ Extract Username
+    // =========================
+    // 📌 EXTRACT USERNAME
+    // =========================
     public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
     }
 
-    // ✅ Extract Claims
+    // =========================
+    // 📌 EXTRACT ROLE (🔥 KEY)
+    // =========================
+    public String extractRole(String token) {
+        return extractAllClaims(token).get("role", String.class);
+    }
+
+    // =========================
+    // 📌 ALL CLAIMS
+    // =========================
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSignKey())
@@ -52,12 +84,21 @@ public class JwtUtil {
                 .getBody();
     }
 
-    // ✅ Validate Token (VERY IMPORTANT)
+    // =========================
+    // ✅ VALIDATION (IMPROVED)
+    // =========================
     public boolean isTokenValid(String token, String username) {
-        final String extractedUsername = extractUsername(token);
-        return (extractedUsername.equals(username) && !isTokenExpired(token));
+        try {
+            final String extractedUsername = extractUsername(token);
+            return (extractedUsername.equals(username) && !isTokenExpired(token));
+        } catch (Exception e) {
+            return false; // 🔥 safe fallback
+        }
     }
 
+    // =========================
+    // ⏰ CHECK EXPIRY
+    // =========================
     private boolean isTokenExpired(String token) {
         return extractAllClaims(token).getExpiration().before(new Date());
     }

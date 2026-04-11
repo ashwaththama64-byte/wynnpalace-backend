@@ -1,6 +1,7 @@
 package com.game.platform.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,48 +12,42 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // 🔥 INDEXED + UNIQUE
     @Column(unique = true, nullable = false)
     private String username;
 
     @Column(nullable = false)
     private String password;
 
-    // ✅ OPTIONAL (admin doesn't need this)
-    @Column(nullable = true)
+    // 🔐 REQUIRED for withdrawals
+    @Column(nullable = false)
     private String fundPassword;
 
-    // ✅ OPTIONAL (admin doesn't need this)
-    @Column(unique = true, nullable = true)
+    @Column(unique = true)
     private String userCode;
 
-    private Double balance = 0.0;
+    // 💰 USE BigDecimal (IMPORTANT)
+    @Column(nullable = false)
+    private BigDecimal balance = BigDecimal.ZERO;
 
-    @Enumerated(EnumType.STRING)
-    private Role role = Role.USER;
+    private LocalDateTime createdAt;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
+    // =========================
+    // 🔥 AUTO SET CREATED TIME
+    // =========================
+    @PrePersist
+    public void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
 
     public User() {}
 
-    public User(Long id, String username, String password, String fundPassword,
-                String userCode, Double balance, Role role, LocalDateTime createdAt) {
-        this.id = id;
-        this.username = username;
-        this.password = password;
-        this.fundPassword = fundPassword;
-        this.userCode = userCode;
-        this.balance = balance;
-        this.role = role;
-        this.createdAt = createdAt;
-    }
-    // ===== GETTERS & SETTERS =====
+    // =========================
+    // GETTERS & SETTERS
+    // =========================
 
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public String getUsername() {
@@ -63,12 +58,12 @@ public class User {
         this.username = username;
     }
 
-    public String getPassword() {
-        return password;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
+    public String getPassword() {
+        return password;
     }
 
     public String getFundPassword() {
@@ -79,6 +74,10 @@ public class User {
         this.fundPassword = fundPassword;
     }
 
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
     public String getUserCode() {
         return userCode;
     }
@@ -87,27 +86,15 @@ public class User {
         this.userCode = userCode;
     }
 
-    public Double getBalance() {
+    public BigDecimal getBalance() {
         return balance;
     }
 
-    public void setBalance(Double balance) {
+    public void setBalance(BigDecimal balance) {
         this.balance = balance;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
     }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
     }
 }

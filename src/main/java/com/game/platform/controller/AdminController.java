@@ -2,10 +2,12 @@ package com.game.platform.controller;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.game.platform.entity.Transaction;
-import com.game.platform.entity.User;
+import com.game.platform.dto.UserResponse;
+import com.game.platform.dto.RechargeRequest;
+import com.game.platform.dto.WithdrawAdminResponse;
 import com.game.platform.service.AdminService;
 
 @RestController
@@ -19,42 +21,47 @@ public class AdminController {
         this.service = service;
     }
 
-    // 🔥 GET ALL USERS
+    // ✅ USERS
     @GetMapping("/users")
-    public List<User> users() {
-        return service.getAllUsers();
+    public ResponseEntity<List<UserResponse>> users() {
+        return ResponseEntity.ok(service.getAllUsers());
     }
 
-    // 💰 RECHARGE
+    // ✅ RECHARGE
     @PostMapping("/recharge")
-    public String recharge(@RequestParam Long userId,
-                           @RequestParam Double amount) {
+    public ResponseEntity<?> recharge(@RequestBody RechargeRequest req) {
 
-        service.recharge(userId, amount);
-        return "Recharge successful";
+        if (req.getUserId() == null || req.getAmount() == null) {
+            return ResponseEntity.badRequest().body("Invalid request");
+        }
+
+        service.recharge(req.getUserId(), req.getAmount());
+        return ResponseEntity.ok("Recharge successful ✅");
     }
 
     // 📥 PENDING WITHDRAWS
     @GetMapping("/withdraw/pending")
-    public List<Transaction> pending() {
-        return service.getPendingWithdraws();
+    public ResponseEntity<List<WithdrawAdminResponse>> pending() {
+        return ResponseEntity.ok(service.getPendingWithdraws());
     }
 
     // ✅ APPROVE
     @PostMapping("/withdraw/approve")
-    public String approve(@RequestParam Long txId) {
+    public ResponseEntity<?> approve(@RequestParam Long txId) {
         service.approveWithdraw(txId);
-        return "Approved";
+        return ResponseEntity.ok("Approved ✅");
     }
 
     // ❌ REJECT
     @PostMapping("/withdraw/reject")
-    public String reject(@RequestParam Long txId) {
+    public ResponseEntity<?> reject(@RequestParam Long txId) {
         service.rejectWithdraw(txId);
-        return "Rejected";
+        return ResponseEntity.ok("Rejected ❌");
     }
+
+    // 🔍 SEARCH
     @GetMapping("/users/search")
-    public List<User> search(@RequestParam String keyword) {
-        return service.searchUsers(keyword);
+    public ResponseEntity<List<UserResponse>> search(@RequestParam String keyword) {
+        return ResponseEntity.ok(service.searchUsers(keyword));
     }
 }

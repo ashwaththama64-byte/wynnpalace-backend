@@ -1,5 +1,6 @@
 package com.game.platform.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Random;
 import java.util.UUID;
@@ -11,7 +12,6 @@ import com.game.platform.dto.AuthResponse;
 import com.game.platform.dto.LoginRequest;
 import com.game.platform.dto.RegisterRequest;
 import com.game.platform.entity.RefreshToken;
-import com.game.platform.entity.Role;
 import com.game.platform.entity.User;
 import com.game.platform.repository.RefreshTokenRepository;
 import com.game.platform.repository.UserRepository;
@@ -55,18 +55,17 @@ public class AuthService {
             throw new RuntimeException("Username already exists");
         }
 
+        if (req.getFundPassword() == null || req.getFundPassword().isEmpty()) {
+            throw new RuntimeException("Fund password is required");
+        }
+
         User user = new User();
 
         user.setUsername(req.getUsername());
         user.setPassword(encoder.encode(req.getPassword()));
-
-        // ✅ Only for USERS
         user.setFundPassword(encoder.encode(req.getFundPassword()));
         user.setUserCode(generateUserCode());
-        user.setBalance(0.0);
-        user.setCreatedAt(LocalDateTime.now());
-
-        user.setRole(Role.USER);
+        user.setBalance(BigDecimal.ZERO);
 
         repo.save(user);
     }
@@ -76,6 +75,8 @@ public class AuthService {
     // =========================
     public AuthResponse login(LoginRequest req) {
 
+        System.out.println("🔥 LOGIN START");
+
         User user = repo.findByUsername(req.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -83,35 +84,20 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
-        String jwtToken = jwtUtil.generateToken(user.getUsername());
+        String jwtToken = jwtUtil.generateUserToken(user.getUsername());
 
-        String refreshToken = generateRefreshToken(user.getUsername());
+        System.out.println("🚀 RETURNING RESPONSE");
 
-        // ✅ IMPORTANT FIX (ROLE ADDED)
+        // ❌ REMOVE refresh token completely
         return new AuthResponse(
                 jwtToken,
-                refreshToken,
-                user.getRole().name()
+                null,
+                "USER"
         );
     }
 
     // =========================
-    // 🔄 GENERATE REFRESH TOKEN
-    // =========================
-    public String generateRefreshToken(String username) {
-
-        RefreshToken token = new RefreshToken();
-        token.setToken(UUID.randomUUID().toString());
-        token.setUsername(username);
-        token.setExpiryDate(LocalDateTime.now().plusDays(7));
-
-        refreshRepo.save(token);
-
-        return token.getToken();
-    }
-
-    // =========================
-    // 🔄 REFRESH TOKEN API
+    // 🔄 REFRESH TOKEN
     // =========================
     public AuthResponse refreshToken(String refreshToken) {
 
@@ -124,14 +110,32 @@ public class AuthService {
 
         User user = repo.findByUsername(token.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        String jwtToken = jwtUtil.generateUserToken(user.getUsername());
 
-        String newJwt = jwtUtil.generateToken(user.getUsername());
+       // String newJwt = jwtUtil.generateUserToken(user.getUsername());
 
         return new AuthResponse(
-                newJwt,
-                refreshToken,
-                user.getRole().name()
+                jwtToken,
+                null,
+                "USER"
         );
+    }
+
+    // =========================
+    // 🔄 GENERATE REFRESH TOKEN
+    // =========================
+    public String generateRefreshToken(String username) {
+    	
+    	refreshRepo.deleteByUsername(username);
+
+        RefreshToken token = new RefreshToken();
+        token.setToken(UUID.randomUUID().toString());
+        token.setUsername(username);
+        token.setExpiryDate(LocalDateTime.now().plusDays(7));
+
+        refreshRepo.save(token);
+
+        return token.getToken();
     }
 
     // =========================
@@ -142,11 +146,9 @@ public class AuthService {
         User user = repo.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.getFundPassword() == null) {
-            throw new RuntimeException("Fund password not set for this user");
-        }
-
-        if (!encoder.matches(fundPassword, user.getFundPassword())) {
+        if (user.getFundPassword() == null ||
+            fundPassword == null ||
+            !encoder.matches(fundPassword, user.getFundPassword())) {
             throw new RuntimeException("Invalid fund password");
         }
     }

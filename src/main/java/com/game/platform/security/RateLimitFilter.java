@@ -14,25 +14,63 @@ import java.util.Map;
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private final Map<String, Integer> requestCounts = new ConcurrentHashMap<>();
+    private static class RequestInfo {
+        int count;
+        long timestamp;
 
-    private static final int MAX_REQUESTS = 100;
+        RequestInfo(int count, long timestamp) {
+            this.count = count;
+            this.timestamp = timestamp;
+        }
+    }
+
+    private final Map<String, RequestInfo> requestCounts = new ConcurrentHashMap<>();
+
+    private static final int MAX_REQUESTS = 100; // 🔥 increased
+    private static final long TIME_WINDOW = 60_000; // 1 minute
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+                                   HttpServletResponse response,
+                                   FilterChain filterChain)
             throws ServletException, IOException {
 
-        String ip = request.getRemoteAddr();
+        String path = request.getRequestURI();
 
-        requestCounts.put(ip, requestCounts.getOrDefault(ip, 0) + 1);
-
-        if (requestCounts.get(ip) > MAX_REQUESTS) {
-            response.setStatus(429);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Too many requests\"}");
+        // =========================
+        // 🔥 SKIP RATE LIMIT (IMPORTANT)
+        // =========================
+        if (path.startsWith("/chat") ||              // WebSocket
+            path.startsWith("/api/chat") ||          // Chat APIs
+            path.startsWith("/ws") ||                // fallback
+            path.startsWith("/api/admin")            // Admin panel
+        ) {
+            filterChain.doFilter(request, response);
             return;
+        }
+
+        String ip = request.getRemoteAddr();
+        long now = System.currentTimeMillis();
+
+        RequestInfo info = requestCounts.get(ip);
+
+        if (info == null) {
+            requestCounts.put(ip, new RequestInfo(1, now));
+        } else {
+
+            if (now - info.timestamp > TIME_WINDOW) {
+                info.count = 1;
+                info.timestamp = now;
+            } else {
+                info.count++;
+            }
+
+            if (info.count > MAX_REQUESTS) {
+                response.setStatus(429);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"message\": \"Too many requests. Try again later.\"}");
+                return;
+            }
         }
 
         filterChain.doFilter(request, response);

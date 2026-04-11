@@ -1,6 +1,7 @@
 package com.game.platform.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,41 +12,96 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private Long userId;
 
+    @Column(nullable = false)
     private String type; // RECHARGE, WITHDRAW, BET, REWARD
 
-    private Double amount;
+    // ✅ MONEY FIELD (SAFE)
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal amount = BigDecimal.ZERO;
 
+    @Column(nullable = false)
     private String status; // SUCCESS, PENDING, REJECTED
 
     private String remark;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Long cardId;
 
-    // ===== getters & setters =====
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
 
-    public Long getId() { return id; }
+    // =========================
+    // AUTO TIMESTAMP
+    // =========================
+    @PrePersist
+    public void onCreate() {
+        this.createdAt = LocalDateTime.now();
 
-    public Long getUserId() { return userId; }
+        // 🔥 SAFETY (avoid null crash)
+        if (this.amount == null) {
+            this.amount = BigDecimal.ZERO;
+        }
+    }
 
-    public void setUserId(Long userId) { this.userId = userId; }
+    // =========================
+    // GETTERS & SETTERS
+    // =========================
 
-    public String getType() { return type; }
+    public Long getId() {
+        return id;
+    }
 
-    public void setType(String type) { this.type = type; }
+    public Long getUserId() {
+        return userId;
+    }
 
-    public Double getAmount() { return amount; }
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
 
-    public void setAmount(Double amount) { this.amount = amount; }
+    public String getType() {
+        return type;
+    }
 
-    public String getStatus() { return status; }
+    public void setType(String type) {
+        this.type = type;
+    }
 
-    public void setStatus(String status) { this.status = status; }
+    public BigDecimal getAmount() {
+        return amount;
+    }
 
-    public String getRemark() { return remark; }
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount != null ? amount : BigDecimal.ZERO; // ✅ SAFE
+    }
 
-    public void setRemark(String remark) { this.remark = remark; }
+    public String getStatus() {
+        return status;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public Long getCardId() {
+        return cardId;
+    }
+
+    public void setCardId(Long cardId) {
+        this.cardId = cardId;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 }

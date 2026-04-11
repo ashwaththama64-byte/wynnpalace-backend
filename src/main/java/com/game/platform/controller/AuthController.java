@@ -17,37 +17,64 @@ public class AuthController {
 
     private final AuthService service;
 
-    // ✅ Constructor Injection (no Lombok)
     public AuthController(AuthService service) {
         this.service = service;
     }
 
-    // ✅ REGISTER
+    // =========================
+    // 📝 REGISTER
+    // =========================
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest req) {
+
+        if (req.getUsername() == null || req.getPassword() == null) {
+            return ResponseEntity.badRequest().body("Username & password required");
+        }
+
         service.register(req);
-        return ResponseEntity.ok("Registered Successfully");
+        return ResponseEntity.ok("Registered Successfully ✅");
     }
 
-    // ✅ LOGIN
+    // =========================
+    // 🔐 LOGIN
+    // =========================
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req) {
+
+        if (req.getUsername() == null || req.getPassword() == null) {
+            return ResponseEntity.badRequest().build(); // ✅ FIX
+        }
+
         return ResponseEntity.ok(service.login(req));
     }
 
-    // ✅ REFRESH TOKEN
+    // =========================
+    // 🔄 REFRESH TOKEN
+    // =========================
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(@RequestParam String refreshToken) {
+
+        if (refreshToken == null || refreshToken.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
         return ResponseEntity.ok(service.refreshToken(refreshToken));
     }
 
-    // ✅ VERIFY FUND PASSWORD
+    // =========================
+    // 🔐 VERIFY FUND PASSWORD
+    // =========================
     @PostMapping("/verify-fund-password")
     public ResponseEntity<?> verifyFundPassword(
             @RequestParam String fundPassword,
             Principal principal) {
 
+        if (principal == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+
         service.verifyFundPassword(principal.getName(), fundPassword);
-        return ResponseEntity.ok("Verified");
+
+        return ResponseEntity.ok("Verified ✅");
     }
 }
