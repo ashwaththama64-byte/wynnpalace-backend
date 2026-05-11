@@ -1,7 +1,8 @@
 package com.game.platform.entity;
 
 import jakarta.persistence.*;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Entity
 public class AdminControl {
@@ -10,57 +11,40 @@ public class AdminControl {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
-    private OffsetDateTime startTime;
+    // ✅ PROFIT WINDOW
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Column(columnDefinition = "TIMESTAMP")
+    private LocalDateTime startTime;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Column(columnDefinition = "TIMESTAMP")
+    private LocalDateTime endTime;
 
-    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
-    private OffsetDateTime endTime;
-
+    // ✅ ENABLE / DISABLE
     private boolean active = false;
-    private double minPercent;
-    private double maxPercent;
 
-    public Long getId() {
-        return id;
-    }
+    // ✅ CONTROL PROFIT %
+    private double minPercent; // e.g. 15
+    private double maxPercent; // e.g. 18
 
-    public OffsetDateTime getStartTime() {
-        return startTime;
-    }
+    // =========================
+    // GETTERS / SETTERS
+    // =========================
 
-    public void setStartTime(OffsetDateTime startTime) {
-        this.startTime = startTime;
-    }
+    public Long getId() { return id; }
 
-    public OffsetDateTime getEndTime() {
-        return endTime;
-    }
+    public LocalDateTime getStartTime() { return startTime; }
+    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
 
-    public void setEndTime(OffsetDateTime endTime) {
-        this.endTime = endTime;
-    }
+    public LocalDateTime getEndTime() { return endTime; }
+    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
 
-    public boolean isActive() {
-        return active;
-    }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 
-    public void setActive(boolean active) {
-        this.active = active;
-    }
+    public double getMinPercent() { return minPercent; }
+    public void setMinPercent(double minPercent) { this.minPercent = minPercent; }
 
-    public double getMinPercent() {
-        return minPercent;
-    }
-
-    public void setMinPercent(double minPercent) {
-        this.minPercent = minPercent;
-    }
-
-    public double getMaxPercent() {
-        return maxPercent;
-    }
-
-    public void setMaxPercent(double maxPercent) {
-        this.maxPercent = maxPercent;
-    }
+    public double getMaxPercent() { return maxPercent; }
+    public void setMaxPercent(double maxPercent) { this.maxPercent = maxPercent; }
 }
