@@ -44,46 +44,62 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-            // ✅ CORS
             .cors(Customizer.withDefaults())
-
-            // ❌ Disable CSRF (JWT)
             .csrf(AbstractHttpConfigurer::disable)
 
-            // 🔐 Stateless (IMPORTANT)
             .sessionManagement(session ->
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
 
-            // 🔒 Authorization Rules
             .authorizeHttpRequests(auth -> auth
 
-                // ✅ Public APIs
+                // =========================
+                // 🔓 PUBLIC APIs
+                // =========================
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/admin/auth/**").permitAll()
                 .requestMatchers("/chat/**").permitAll()
                 .requestMatchers("/api/chat/**").permitAll()
-                .requestMatchers("/api/upload").permitAll() // ✅ ADD
+                .requestMatchers("/api/upload").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
 
-                // 🔥 ADMIN ONLY
+                // 🎯 GAME RESULTS (PUBLIC)
+                .requestMatchers("/api/results/**").permitAll()
+
+                // =========================
+                // 🎮 GAME (USER + ADMIN)
+                // =========================
+                .requestMatchers("/api/game/config").permitAll()
+                .requestMatchers("/api/game/**")
+                .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+
+                // =========================
+                // 👤 USER BETS
+                // =========================
+                .requestMatchers("/api/bets/**")
+                .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+
+                // =========================
+                // 🔧 ADMIN CONTROL ONLY
+                // =========================
+                .requestMatchers("/api/admin/control/**")
+                .hasAuthority("ROLE_ADMIN")
+
+                // =========================
+                // 🔧 ALL ADMIN APIs
+                // =========================
                 .requestMatchers("/api/admin/**")
                 .hasAuthority("ROLE_ADMIN")
 
-                // 🔥 USER + ADMIN
-                .requestMatchers("/api/user/**")
-                .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-
-                // 🔒 Everything else protected
+                // =========================
+                // 🔒 EVERYTHING ELSE
+                // =========================
                 .anyRequest().authenticated()
             )
 
-            // 🔥 FILTER ORDER (VERY IMPORTANT)
+            // 🔥 FILTER ORDER
             .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
-        // ❌ REMOVE BASIC AUTH (NOT NEEDED)
-        // .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }

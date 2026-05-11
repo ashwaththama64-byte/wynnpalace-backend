@@ -22,11 +22,12 @@ public class ChatService {
     }
 
     // 🔥 SAVE MESSAGE
-    public ChatMessage save(String sender, String username, String message, String imageUrl, String ticketId) {
+    public ChatMessage save(String sender, String username,String userId, String message, String imageUrl, String ticketId) {
 
         ChatMessage msg = new ChatMessage();
         msg.setSender(sender);
         msg.setUsername(username);
+        msg.setUserId(userId);
         msg.setMessage(message);
         msg.setImageUrl(imageUrl); // ✅ NEW
         msg.setTime(LocalDateTime.now());

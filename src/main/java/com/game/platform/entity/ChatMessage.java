@@ -12,6 +12,8 @@ public class ChatMessage {
 
     private String sender;   // USER / ADMIN
     private String username; // user identifier
+    
+    private String userId;
 
     @Column(length = 1000)
     private String message;
@@ -89,6 +91,14 @@ public class ChatMessage {
 		this.imageUrl = imageUrl;
 	}
 
+	public String getUserId() {
+		return userId;
+	}
+
+	public void setUserId(String userId) {
+		this.userId = userId;
+	}
+	
     
     
     

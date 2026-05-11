@@ -10,6 +10,8 @@ public class UserResponse {
 
     // ✅ FIXED (BigDecimal)
     private BigDecimal balance;
+    
+    private BigDecimal withdrawable; 
 
     // =========================
     // GETTERS & SETTERS
@@ -19,7 +21,15 @@ public class UserResponse {
         return id;
     }
 
-    public void setId(Long id) {
+    public BigDecimal getWithdrawable() {
+		return withdrawable;
+	}
+
+	public void setWithdrawable(BigDecimal withdrawable) {
+		this.withdrawable = withdrawable;
+	}
+
+	public void setId(Long id) {
         this.id = id;
     }
 

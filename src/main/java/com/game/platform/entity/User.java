@@ -5,40 +5,90 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+        @Index(name = "idx_username", columnList = "username"),
+        @Index(name = "idx_usercode", columnList = "userCode")
+})
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 🔥 INDEXED + UNIQUE
+    // 🔥 UNIQUE USERNAME
     @Column(unique = true, nullable = false)
     private String username;
 
     @Column(nullable = false)
     private String password;
 
-    // 🔐 REQUIRED for withdrawals
+    // 🔐 For withdrawals
     @Column(nullable = false)
     private String fundPassword;
 
     @Column(unique = true)
     private String userCode;
 
-    // 💰 USE BigDecimal (IMPORTANT)
-    @Column(nullable = false)
+    // 💰 MONEY FIELD (CRITICAL FIX)
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;
+    
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal withdrawable = BigDecimal.ZERO;
+
+    // 🔒 Prevent race conditions (IMPORTANT)
+    @Version
+    private Long version;
 
     private LocalDateTime createdAt;
 
-    // =========================
-    // 🔥 AUTO SET CREATED TIME
-    // =========================
+    private String phone;
+    private String email;
+    private LocalDateTime lastLogin;
+   
+
     @PrePersist
-    public void onCreate() {
-        this.createdAt = LocalDateTime.now();
+    @PreUpdate
+    public void beforeSave() {
+
+        if (this.withdrawable == null) {
+            this.withdrawable = BigDecimal.ZERO;
+        }
+
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
     }
+    // =========================
+    // 🔥 BUSINESS METHODS (VERY IMPORTANT)
+    // =========================
+
+    public void deductBalance(BigDecimal amount) {
+        if (this.balance.compareTo(amount) < 0) {
+            throw new RuntimeException("Insufficient balance");
+        }
+        this.balance = this.balance.subtract(amount);
+    }
+
+    public void addBalance(BigDecimal amount) {
+        this.balance = this.balance.add(amount);
+    }
+    
+ // 🔥 WITHDRAWABLE METHODS
+    public void addWithdrawable(BigDecimal amount) {
+        this.withdrawable = this.withdrawable.add(amount);
+    }
+
+    public void deductWithdrawable(BigDecimal amount) {
+        if (this.withdrawable.compareTo(amount) < 0) {
+            throw new RuntimeException("Insufficient withdrawable balance");
+        }
+        this.withdrawable = this.withdrawable.subtract(amount);
+    }
+
+    // =========================
+    // CONSTRUCTOR
+    // =========================
 
     public User() {}
 
@@ -54,12 +104,12 @@ public class User {
         return username;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getPassword() {
@@ -97,4 +147,42 @@ public class User {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public LocalDateTime getLastLogin() {
+        return lastLogin;
+    }
+
+    public void setLastLogin(LocalDateTime lastLogin) {
+        this.lastLogin = lastLogin;
+    }
+
+	public BigDecimal getWithdrawable() {
+		return withdrawable;
+	}
+
+	public void setWithdrawable(BigDecimal withdrawable) {
+		this.withdrawable = withdrawable;
+	}
+    
+    
 }

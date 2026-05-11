@@ -41,6 +41,7 @@ public class ChatController {
         ChatMessage saved = service.save(
                 msg.getSender(),
                 msg.getUsername(),
+                msg.getUserId(),
                 msg.getMessage(),
                 msg.getImageUrl(),
                 ticketId

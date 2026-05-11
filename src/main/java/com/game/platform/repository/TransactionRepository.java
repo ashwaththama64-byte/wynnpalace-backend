@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.game.platform.entity.Transaction;
+import com.game.platform.entity.TransactionStatus;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
@@ -17,5 +18,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             LocalDateTime end
     );
 
-    List<Transaction> findByStatus(String status);
+    List<Transaction> findByStatus(TransactionStatus status);
 }

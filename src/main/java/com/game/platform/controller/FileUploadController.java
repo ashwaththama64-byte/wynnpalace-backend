@@ -17,7 +17,7 @@ public class FileUploadController {
     @PostMapping("/upload")
     public Map<String, String> upload(@RequestParam("file") MultipartFile file) throws IOException {
 
-        if (file.getSize() > 2 * 1024 * 1024) {
+        if (file.getSize() > 10 * 1024 * 1024) {
             throw new RuntimeException("File too large");
         }
 

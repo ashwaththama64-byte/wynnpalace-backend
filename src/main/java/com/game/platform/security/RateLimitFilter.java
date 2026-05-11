@@ -43,7 +43,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (path.startsWith("/chat") ||              // WebSocket
             path.startsWith("/api/chat") ||          // Chat APIs
             path.startsWith("/ws") ||                // fallback
-            path.startsWith("/api/admin")            // Admin panel
+            
+            // ✅ ADMIN SAFE
+            path.startsWith("/api/admin") ||
+
+            // 🔥 ADD THESE (CRITICAL)
+            path.startsWith("/api/results") ||
+            path.startsWith("/api/game") ||
+            path.startsWith("/api/bets")
         ) {
             filterChain.doFilter(request, response);
             return;

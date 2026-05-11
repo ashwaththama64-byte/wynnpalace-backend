@@ -3,6 +3,7 @@ package com.game.platform.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.game.platform.dto.AdminChangeCredentialsRequest;
 import com.game.platform.dto.LoginRequest;
 import com.game.platform.service.AdminService;
 
@@ -41,5 +42,15 @@ public class AdminAuthController {
                         "role", "ADMIN"
                 )
         );
+    }
+    @PostMapping("/change-credentials")
+    public ResponseEntity<?> changeCredentials(@RequestBody AdminChangeCredentialsRequest req) {
+        try {
+            adminService.changeCredentials(req);
+            return ResponseEntity.ok(Map.of("message", "Credentials updated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 }

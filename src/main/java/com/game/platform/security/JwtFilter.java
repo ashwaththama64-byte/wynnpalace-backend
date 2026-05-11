@@ -34,7 +34,7 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         // =========================
-        // 🔥 SKIP JWT FOR PUBLIC + WEBSOCKET
+        // 🔥 SKIP PUBLIC ENDPOINTS
         // =========================
         if (path.startsWith("/api/auth") ||
             path.startsWith("/api/admin/auth") ||
@@ -47,9 +47,6 @@ public class JwtFilter extends OncePerRequestFilter {
         try {
             String authHeader = request.getHeader("Authorization");
 
-            // =========================
-            // 🔐 CHECK TOKEN
-            // =========================
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
 
                 String token = authHeader.substring(7);
@@ -57,30 +54,38 @@ public class JwtFilter extends OncePerRequestFilter {
                 String username = jwtUtil.extractUsername(token);
                 String role = jwtUtil.extractRole(token);
 
+                // =========================
+                // 🔥 FIX ROLE FORMAT
+                // =========================
+                if (role != null && !role.startsWith("ROLE_")) {
+                    role = "ROLE_" + role;
+                }
+
+                // 🔍 DEBUG (VERY IMPORTANT)
+                System.out.println("🔥 JWT USER: " + username);
+                System.out.println("🔥 JWT ROLE: " + role);
+
                 if (username != null &&
-                        SecurityContextHolder.getContext().getAuthentication() == null) {
+                    SecurityContextHolder.getContext().getAuthentication() == null &&
+                    jwtUtil.isTokenValid(token, username)) {
 
-                    if (jwtUtil.isTokenValid(token, username)) {
+                    List<SimpleGrantedAuthority> authorities =
+                            List.of(new SimpleGrantedAuthority(role));
 
-                        // ✅ ROLE already contains ROLE_USER / ROLE_ADMIN
-                        List<SimpleGrantedAuthority> authorities =
-                                List.of(new SimpleGrantedAuthority(role));
+                    UsernamePasswordAuthenticationToken auth =
+                            new UsernamePasswordAuthenticationToken(
+                                    username,
+                                    null,
+                                    authorities
+                            );
 
-                        UsernamePasswordAuthenticationToken auth =
-                                new UsernamePasswordAuthenticationToken(
-                                        username,
-                                        null,
-                                        authorities
-                                );
-
-                        SecurityContextHolder.getContext().setAuthentication(auth);
-                    }
+                    SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             }
 
         } catch (Exception e) {
-            // 🔥 DON'T BREAK REQUEST (important for frontend stability)
-            System.out.println("JWT Error: " + e.getMessage());
+            // ❌ Don't break request
+            System.out.println("❌ JWT Error: " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);

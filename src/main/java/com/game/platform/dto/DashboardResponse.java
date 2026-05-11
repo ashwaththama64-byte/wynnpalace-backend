@@ -12,6 +12,7 @@ public class DashboardResponse {
     private BigDecimal balance;
     private BigDecimal betToday;
     private BigDecimal profit;
+    private BigDecimal withdrawable;
 
     // =========================
     // GETTERS & SETTERS
@@ -64,4 +65,13 @@ public class DashboardResponse {
     public void setProfit(BigDecimal profit) {
         this.profit = profit;
     }
+
+	public BigDecimal getWithdrawable() {
+		return withdrawable;
+	}
+
+	public void setWithdrawable(BigDecimal withdrawable) {
+		this.withdrawable = withdrawable;
+	}
+    
 }

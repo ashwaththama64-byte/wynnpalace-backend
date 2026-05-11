@@ -18,7 +18,8 @@ public class CorsConfig {
 
         // 🔥 YOUR FRONTEND URL
         config.setAllowedOrigins(List.of(
-                "http://localhost:5173"
+                "http://localhost:5173",
+                "https://wynnpalace.netlify.app"
         ));
 
         config.setAllowedHeaders(List.of("*"));

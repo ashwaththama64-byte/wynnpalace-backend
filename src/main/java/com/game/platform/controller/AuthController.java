@@ -1,7 +1,7 @@
 package com.game.platform.controller;
 
 import java.security.Principal;
-
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,8 +24,9 @@ public class AuthController {
     // =========================
     // 📝 REGISTER
     // =========================
+
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest req) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest req){
 
         if (req.getUsername() == null || req.getPassword() == null) {
             return ResponseEntity.badRequest().body("Username & password required");
@@ -39,7 +40,7 @@ public class AuthController {
     // 🔐 LOGIN
     // =========================
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req){
 
         if (req.getUsername() == null || req.getPassword() == null) {
             return ResponseEntity.badRequest().build(); // ✅ FIX
@@ -48,18 +49,7 @@ public class AuthController {
         return ResponseEntity.ok(service.login(req));
     }
 
-    // =========================
-    // 🔄 REFRESH TOKEN
-    // =========================
-    @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@RequestParam String refreshToken) {
 
-        if (refreshToken == null || refreshToken.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        return ResponseEntity.ok(service.refreshToken(refreshToken));
-    }
 
     // =========================
     // 🔐 VERIFY FUND PASSWORD

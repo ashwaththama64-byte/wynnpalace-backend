@@ -5,8 +5,10 @@ import java.time.LocalDateTime;
 import java.util.Random;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.game.platform.dto.AuthResponse;
 import com.game.platform.dto.LoginRequest;
@@ -16,6 +18,8 @@ import com.game.platform.entity.User;
 import com.game.platform.repository.RefreshTokenRepository;
 import com.game.platform.repository.UserRepository;
 import com.game.platform.util.JwtUtil;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class AuthService {
@@ -49,14 +53,15 @@ public class AuthService {
     // =========================
     // ✅ REGISTER
     // =========================
+    @Transactional
     public void register(RegisterRequest req) {
 
         if (repo.findByUsername(req.getUsername()).isPresent()) {
-            throw new RuntimeException("Username already exists");
+        	throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username already exists");
         }
 
         if (req.getFundPassword() == null || req.getFundPassword().isEmpty()) {
-            throw new RuntimeException("Fund password is required");
+        	throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message");
         }
 
         User user = new User();
@@ -66,6 +71,7 @@ public class AuthService {
         user.setFundPassword(encoder.encode(req.getFundPassword()));
         user.setUserCode(generateUserCode());
         user.setBalance(BigDecimal.ZERO);
+        user.setWithdrawable(BigDecimal.ZERO);
 
         repo.save(user);
     }
@@ -73,52 +79,36 @@ public class AuthService {
     // =========================
     // ✅ LOGIN
     // =========================
+    @Transactional
     public AuthResponse login(LoginRequest req) {
+        try {
 
-        System.out.println("🔥 LOGIN START");
+            System.out.println("🔥 LOGIN START: " + req.getUsername());
 
-        User user = repo.findByUsername(req.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            User user = repo.findByUsername(req.getUsername())
+                .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid username or password"
+                ));
 
-        if (!encoder.matches(req.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+            if (!encoder.matches(req.getPassword(), user.getPassword())) {
+                throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid username or password"
+                );
+            }
+
+            user.setLastLogin(LocalDateTime.now());
+            repo.save(user);
+
+            String jwtToken = jwtUtil.generateUserToken(user.getUsername());
+
+            return new AuthResponse(jwtToken, "USER", user.getId());
+
+        } catch (Exception e) {
+            e.printStackTrace(); // 🔥 THIS WAS MISSING
+            throw e;
         }
-
-        String jwtToken = jwtUtil.generateUserToken(user.getUsername());
-
-        System.out.println("🚀 RETURNING RESPONSE");
-
-        // ❌ REMOVE refresh token completely
-        return new AuthResponse(
-                jwtToken,
-                null,
-                "USER"
-        );
-    }
-
-    // =========================
-    // 🔄 REFRESH TOKEN
-    // =========================
-    public AuthResponse refreshToken(String refreshToken) {
-
-        RefreshToken token = refreshRepo.findByToken(refreshToken)
-                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
-
-        if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Refresh token expired");
-        }
-
-        User user = repo.findByUsername(token.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        String jwtToken = jwtUtil.generateUserToken(user.getUsername());
-
-       // String newJwt = jwtUtil.generateUserToken(user.getUsername());
-
-        return new AuthResponse(
-                jwtToken,
-                null,
-                "USER"
-        );
     }
 
     // =========================

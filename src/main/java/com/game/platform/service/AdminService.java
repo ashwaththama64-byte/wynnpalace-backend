@@ -6,17 +6,11 @@ import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.game.platform.dto.AdminChangeCredentialsRequest;
 import com.game.platform.dto.UserResponse;
 import com.game.platform.dto.WithdrawAdminResponse;
-import com.game.platform.entity.Admin;
-import com.game.platform.entity.BankCard;
-import com.game.platform.entity.Transaction;
-import com.game.platform.entity.User;
-import com.game.platform.repository.AdminRepository;
-import com.game.platform.repository.BankCardRepository;
-import com.game.platform.repository.TransactionRepository;
-import com.game.platform.repository.UserRepository;
-import com.game.platform.security.JwtService;
+import com.game.platform.entity.*;
+import com.game.platform.repository.*;
 import com.game.platform.util.JwtUtil;
 
 import jakarta.transaction.Transactional;
@@ -27,30 +21,30 @@ public class AdminService {
     private final UserRepository userRepo;
     private final TransactionRepository txRepo;
     private final BankCardRepository cardRepo;
-    
+
     private final AdminRepository adminRepo;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
     public AdminService(UserRepository userRepo,
-            TransactionRepository txRepo,
-            BankCardRepository cardRepo,
-            AdminRepository adminRepo,
-            PasswordEncoder passwordEncoder,
-            JwtUtil jwtUtil) {
+                        TransactionRepository txRepo,
+                        BankCardRepository cardRepo,
+                        AdminRepository adminRepo,
+                        PasswordEncoder passwordEncoder,
+                        JwtUtil jwtUtil) {
 
-this.userRepo = userRepo;
-this.txRepo = txRepo;
-this.cardRepo = cardRepo;
+        this.userRepo = userRepo;
+        this.txRepo = txRepo;
+        this.cardRepo = cardRepo;
+        this.adminRepo = adminRepo;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+    }
 
-this.adminRepo = adminRepo;
-this.passwordEncoder = passwordEncoder;
-this.jwtUtil = jwtUtil;
-}
-    
+    // =========================
+    // 🔐 ADMIN LOGIN
+    // =========================
     public String login(String username, String password) {
-
-        System.out.println("🔐 ADMIN LOGIN START");
 
         Admin admin = adminRepo.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
@@ -59,16 +53,11 @@ this.jwtUtil = jwtUtil;
             throw new RuntimeException("Invalid password");
         }
 
-        // ✅ FIXED
-        String token = jwtUtil.generateAdminToken(admin.getUsername());
-
-        System.out.println("GENERATING TOKEN ROLE: ROLE_ADMIN");
-
-        return token;
+        return jwtUtil.generateAdminToken(admin.getUsername());
     }
 
     // =========================
-    // 🔥 GET ALL USERS
+    // 👤 GET ALL USERS
     // =========================
     public List<UserResponse> getAllUsers() {
         return userRepo.findAll().stream().map(user -> {
@@ -77,12 +66,13 @@ this.jwtUtil = jwtUtil;
             res.setUsername(user.getUsername());
             res.setUserCode(user.getUserCode());
             res.setBalance(user.getBalance());
+            res.setWithdrawable(user.getWithdrawable());
             return res;
         }).toList();
     }
 
     // =========================
-    // ✅ RECHARGE (FIXED)
+    // 💰 RECHARGE
     // =========================
     @Transactional
     public void recharge(Long userId, BigDecimal amount) {
@@ -94,22 +84,21 @@ this.jwtUtil = jwtUtil;
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // ✅ FIX
-        user.setBalance(user.getBalance().add(amount));
+        user.addBalance(amount);
         userRepo.save(user);
 
         Transaction tx = new Transaction();
         tx.setUserId(userId);
         tx.setAmount(amount);
-        tx.setType("RECHARGE");
-        tx.setStatus("SUCCESS");
+        tx.setType(TransactionType.RECHARGE);
+        tx.setStatus(TransactionStatus.SUCCESS);
         tx.setRemark("Admin recharge");
 
         txRepo.save(tx);
     }
 
     // =========================
-    // 🔥 APPROVE WITHDRAW (FIXED)
+    // ✅ APPROVE WITHDRAW
     // =========================
     @Transactional
     public void approveWithdraw(Long txId) {
@@ -117,23 +106,11 @@ this.jwtUtil = jwtUtil;
         Transaction tx = txRepo.findById(txId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found"));
 
-        if (!"PENDING".equals(tx.getStatus())) {
+        if (tx.getStatus() != TransactionStatus.PENDING) {
             throw new RuntimeException("Already processed");
         }
 
-        User user = userRepo.findById(tx.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // ✅ FIX (BigDecimal compare)
-        if (user.getBalance().compareTo(tx.getAmount()) < 0) {
-            throw new RuntimeException("Insufficient balance");
-        }
-
-        // ✅ FIX (subtract)
-        user.setBalance(user.getBalance().subtract(tx.getAmount()));
-        userRepo.save(user);
-
-        tx.setStatus("SUCCESS");
+        tx.setStatus(TransactionStatus.SUCCESS);
         tx.setRemark("Withdraw approved");
 
         txRepo.save(tx);
@@ -148,18 +125,29 @@ this.jwtUtil = jwtUtil;
         Transaction tx = txRepo.findById(txId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found"));
 
-        tx.setStatus("REJECTED");
-        tx.setRemark("Withdraw rejected");
+        if (tx.getStatus() != TransactionStatus.PENDING) {
+            throw new RuntimeException("Already processed");
+        }
+
+        User user = userRepo.findById(tx.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 🔄 Refund to withdrawable
+        user.addWithdrawable(tx.getAmount());
+        userRepo.save(user);
+
+        tx.setStatus(TransactionStatus.FAILED);
+        tx.setRemark("Withdraw rejected & refunded");
 
         txRepo.save(tx);
     }
 
     // =========================
-    // 🔥 GET PENDING WITHDRAWS
+    // 📋 PENDING WITHDRAWS
     // =========================
     public List<WithdrawAdminResponse> getPendingWithdraws() {
 
-        List<Transaction> list = txRepo.findByStatus("PENDING");
+        List<Transaction> list = txRepo.findByStatus(TransactionStatus.PENDING);
 
         return list.stream().map(tx -> {
 
@@ -174,11 +162,11 @@ this.jwtUtil = jwtUtil;
             res.setTxId(tx.getId());
             res.setUserId(tx.getUserId());
             res.setAmount(tx.getAmount());
-            res.setStatus(tx.getStatus());
+            res.setStatus(tx.getStatus().name());
 
             if (card != null) {
                 res.setBankName(card.getBankName());
-                res.setAccountNumber(mask(card.getAccountNumber()));
+                res.setAccountNumber(card.getAccountNumber());
                 res.setHolderName(card.getHolderName());
                 res.setIfsc(card.getIfsc());
             }
@@ -201,15 +189,41 @@ this.jwtUtil = jwtUtil;
                     res.setUsername(user.getUsername());
                     res.setUserCode(user.getUserCode());
                     res.setBalance(user.getBalance());
+                    res.setWithdrawable(user.getWithdrawable());
                     return res;
                 }).toList();
     }
+    @Transactional
+    public void changeCredentials(AdminChangeCredentialsRequest req) {
 
-    // =========================
-    // 🔐 MASK ACCOUNT NUMBER
-    // =========================
-    private String mask(String acc) {
-        if (acc == null || acc.length() < 4) return "****";
-        return "****" + acc.substring(acc.length() - 4);
+        // 1️⃣ Find admin by old username
+        Admin admin = adminRepo.findByUsername(req.getOldUsername())
+                .orElseThrow(() -> new RuntimeException("Admin not found"));
+
+        // 2️⃣ Verify old password
+        if (!passwordEncoder.matches(req.getOldPassword(), admin.getPassword())) {
+            throw new RuntimeException("Old password is incorrect");
+        }
+
+        // 3️⃣ Check new password match
+        if (!req.getNewPassword().equals(req.getConfirmPassword())) {
+            throw new RuntimeException("Passwords do not match");
+        }
+
+        // 4️⃣ Update username (optional)
+        if (req.getNewUsername() != null && !req.getNewUsername().isBlank()) {
+
+            // check duplicate
+            adminRepo.findByUsername(req.getNewUsername()).ifPresent(a -> {
+                throw new RuntimeException("Username already taken");
+            });
+
+            admin.setUsername(req.getNewUsername());
+        }
+
+        // 5️⃣ Update password
+        admin.setPassword(passwordEncoder.encode(req.getNewPassword()));
+
+        adminRepo.save(admin);
     }
 }

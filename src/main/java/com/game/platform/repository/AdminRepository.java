@@ -1,12 +1,12 @@
 package com.game.platform.repository;
 
-import java.util.Optional;
-
+import com.game.platform.entity.Admin;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.game.platform.entity.Admin;
+import java.util.Optional;
 
 public interface AdminRepository extends JpaRepository<Admin, Long> {
 
+    // 🔐 LOGIN SUPPORT
     Optional<Admin> findByUsername(String username);
 }
