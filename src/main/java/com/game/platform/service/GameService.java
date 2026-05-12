@@ -282,40 +282,56 @@ public class GameService {
             double refund;
             if (adminMode) {
 
-            	double min = adminMin;
-            	double max = adminMax;
+                // 🎯 Random profit inside admin range
+                percent =
+                        randomBetween(adminMin, adminMax);
 
-                percent = randomBetween(min, max);
-
-                double winAmount = winning + (winning * percent / 100);
-
-                 refund = losing * 0.8;
-
-                double totalReturn = winAmount + refund;
-
-                // ✅ guarantee user win within range
-                double minReturn = totalDouble * (1 + percent / 100);
-
-                if (totalReturn < minReturn) {
-                    totalReturn = minReturn;
-                }
+                // 💰 Guaranteed profit
+                double totalReturn =
+                        totalDouble +
+                        (totalDouble * percent / 100);
 
                 totalPayout += totalReturn;
 
-                User user = userRepo.findByIdForUpdate(bet.getUser().getId()).orElseThrow();
-                user.addWithdrawable(BigDecimal.valueOf(totalReturn));
+                // 👤 Update user wallet
+                User user = userRepo
+                        .findByIdForUpdate(
+                                bet.getUser().getId()
+                        )
+                        .orElseThrow();
+
+                user.addWithdrawable(
+                        BigDecimal.valueOf(totalReturn)
+                );
+
                 userRepo.save(user);
 
+                // ✅ ALWAYS WIN
                 bet.setStatus(BetStatus.WIN);
-                bet.setPayout(BigDecimal.valueOf(totalReturn));
+
+                bet.setPayout(
+                        BigDecimal.valueOf(totalReturn)
+                );
+
                 betRepo.save(bet);
 
+                // 📄 Transaction
                 Transaction tx = new Transaction();
+
                 tx.setUserId(user.getId());
-                tx.setAmount(BigDecimal.valueOf(totalReturn));
+
+                tx.setAmount(
+                        BigDecimal.valueOf(totalReturn)
+                );
+
                 tx.setType(TransactionType.WIN);
+
                 tx.setStatus(TransactionStatus.SUCCESS);
-                tx.setRemark("Admin controlled payout " + percent + "%");
+
+                tx.setRemark(
+                        "Venice guaranteed profit " +
+                        percent + "%"
+                );
 
                 txRepo.save(tx);
 
