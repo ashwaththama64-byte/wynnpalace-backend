@@ -77,9 +77,8 @@ public class AdminControlService {
     // =========================
     public AdminControl getActiveControl() {
 
-    	LocalDateTime now = LocalDateTime.now(java.time.ZoneOffset.UTC);
-    	
-    	
+        LocalDateTime now =
+                LocalDateTime.now(java.time.ZoneOffset.UTC);
 
         AdminControl control = repo
             .findTopByActiveTrueAndStartTimeLessThanEqualAndEndTimeGreaterThanEqualOrderByIdDesc(
@@ -87,19 +86,29 @@ public class AdminControlService {
                 now
             )
             .orElse(null);
+
         System.out.println("NOW: " + now);
+
+        // ✅ VERY IMPORTANT NULL CHECK
+        if (control == null) {
+
+            System.out.println("⚠️ No active Venice control");
+
+            return null;
+        }
+
         System.out.println("START: " + control.getStartTime());
         System.out.println("END: " + control.getEndTime());
 
-        // 🔥 AUTO CLEAN EXPIRED CONTROL (EXTRA SAFETY)
-        if (control != null && now.isAfter(control.getEndTime())) {
+        // 🔥 AUTO CLEAN EXPIRED
+        if (now.isAfter(control.getEndTime())) {
+
             control.setActive(false);
+
             repo.save(control);
+
             return null;
         }
-        System.out.println("NOW: " + now);
-        System.out.println("START: " + control.getStartTime());
-        System.out.println("END: " + control.getEndTime());
 
         return control;
     }
