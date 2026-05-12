@@ -208,11 +208,16 @@ public class GameService {
 
         AdminControl admin = adminControlService.getActiveControl();
 
-        boolean adminMode = admin != null;
-        double adminMin = adminMode ? admin.getMinPercent() : 0;
-        double adminMax = adminMode ? admin.getMaxPercent() : 0;
+        boolean adminMode = false;
+        double adminMin = 0;
+        double adminMax = 0;
 
-        // 🎯 RESULT
+        if (admin != null) {
+            adminMode = true;
+            adminMin = admin.getMinPercent();
+            adminMax = admin.getMaxPercent();
+        }
+        
         String result;
 
         if (adminMode) {
@@ -277,8 +282,8 @@ public class GameService {
             double refund;
             if (adminMode) {
 
-                double min = admin.getMinPercent();
-                double max = admin.getMaxPercent();
+            	double min = adminMin;
+            	double max = adminMax;
 
                 percent = randomBetween(min, max);
 
