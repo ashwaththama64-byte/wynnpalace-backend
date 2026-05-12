@@ -20,7 +20,9 @@ public class CorsConfig {
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "https://wynnpalace.netlify.app",
-                "https://wynnpalace.netlify.app/wynnpalace/admin/adminlogin"
+                "https://wynnpalace.netlify.app/wynnpalace/admin/adminlogin",
+                "https://wynnsino.online",
+                "https://www.wynnsino.online"
         ));
 
         config.setAllowedHeaders(List.of("*"));
